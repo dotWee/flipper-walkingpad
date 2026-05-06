@@ -1,0 +1,18 @@
+# Compiled binaries
+dist/
+build/
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# uFBT
+.ufbt/
+
+# Test binaries
+tests/test_protocol
+tests/test_ftms
+
+# OS
+.DS_Store
+Thumbs.db
