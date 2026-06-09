@@ -1,5 +1,9 @@
 # WalkingPad Controller for Flipper Zero
 
+<center>
+    <img src="icon.png" alt="WalkingPad Controller for Flipper Zero" width="100" height="100">
+</center>
+
 A Flipper Zero application that lets you monitor and control your KingSmith WalkingPad treadmill over Bluetooth Low Energy -- directly from the Flipper, with no external hardware.
 
 ## Supported Devices

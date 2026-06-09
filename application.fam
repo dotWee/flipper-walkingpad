@@ -10,6 +10,13 @@ App(
         "notification",
         "bt",
     ],
+    sources=[
+        "walkingpad_app.c",
+        "ble/*.c",
+        "protocol/*.c",
+        "views/*.c",
+        "!moon-fw",
+    ],
     order=20,
     fap_category="Tools",
 )

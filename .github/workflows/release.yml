@@ -8,13 +8,21 @@ on:
 permissions:
   contents: write
 
+env:
+  MOON_FIRMWARE_REF: dev
+
 jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: app
 
       - name: Build and run tests
         run: make -C tests clean run
@@ -22,9 +30,14 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: app
 
       - name: Install clang-format
         run: |
@@ -39,14 +52,41 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, lint]
     steps:
-      - name: Checkout
+      - name: Checkout app
         uses: actions/checkout@v4
+        with:
+          path: app
+
+      - name: Checkout Moon Firmware
+        uses: actions/checkout@v4
+        with:
+          repository: KaraZajac/Moon-Firmware
+          ref: ${{ env.MOON_FIRMWARE_REF }}
+          path: moon-fw
+
+      - name: Cache Moon Firmware build
+        uses: actions/cache@v4
+        with:
+          path: moon-fw/build
+          key: moon-fw-${{ env.MOON_FIRMWARE_REF }}-${{ hashFiles('moon-fw/fbt_options.py', 'moon-fw/SConstruct') }}
+          restore-keys: |
+            moon-fw-${{ env.MOON_FIRMWARE_REF }}-
+
+      - name: Build Moon Firmware SDK
+        run: |
+          cd moon-fw
+          ./fbt COMPACT=1 SKIP_EXTERNAL=1 updater_package
+          SDK_ZIP="$(ls dist/f7-C/flipper-z-f7-sdk-*.zip)"
+          echo "SDK_ZIP=${SDK_ZIP}" >> "${GITHUB_ENV}"
+          echo "Moon SDK: ${SDK_ZIP}"
 
       - name: Build with ufbt
         uses: flipperdevices/flipperzero-ufbt-action@v0.1
         id: build-app
         with:
-          sdk-channel: release
+          app-dir: app
+          sdk-file: moon-fw/${{ env.SDK_ZIP }}
+          sdk-hw-target: f7
 
       - name: Upload FAP artifact
         uses: actions/upload-artifact@v4
