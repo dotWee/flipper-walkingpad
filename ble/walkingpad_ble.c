@@ -15,6 +15,8 @@
 
 #define TAG "WalkingPadBLE"
 
+#define BLE_GATT_UUID_TYPE_16 1
+
 /* Legacy WiLink UUIDs */
 #define LEGACY_SVC_UUID_16 0xFE00
 #define LEGACY_RX_UUID_16 0xFE01 /* host -> pad  (write) */
@@ -243,17 +245,16 @@ static void gatt_cb(BleGattClientEvent *event, void *context) {
 
   switch (event->type) {
   case BleGattClientEventDiscoverComplete: {
-    FURI_LOG_I(TAG, "Service discovery, count=%d",
-               event->discover.service_count);
+    FURI_LOG_I(TAG, "Service discovery, count=%d", event->discover.count);
 
     uint16_t target_uuid = (ble->detected_proto == WalkingPadProtoFTMS)
                                ? FTMS_SVC_UUID_16
                                : LEGACY_SVC_UUID_16;
 
-    for (uint8_t i = 0; i < event->discover.service_count; i++) {
+    for (uint8_t i = 0; i < event->discover.count; i++) {
       const BleGattService *svc = &event->discover.services[i];
-      if (svc->uuid_type == BleGattUuidType16 &&
-          svc->uuid.uuid16 == target_uuid) {
+      if (svc->uuid_type == BLE_GATT_UUID_TYPE_16 &&
+          svc->uuid_16 == target_uuid) {
         FURI_LOG_I(TAG, "Target service found, handles=%d-%d",
                    svc->start_handle, svc->end_handle);
         furi_mutex_acquire(ble->mutex, FuriWaitForever);
@@ -270,23 +271,21 @@ static void gatt_cb(BleGattClientEvent *event, void *context) {
   }
 
   case BleGattClientEventCharDiscoverComplete: {
-    FURI_LOG_I(TAG, "Char discovery, count=%d",
-               event->char_discover.char_count);
+    FURI_LOG_I(TAG, "Char discovery, count=%d", event->char_discover.count);
     furi_mutex_acquire(ble->mutex, FuriWaitForever);
 
-    for (uint8_t i = 0; i < event->char_discover.char_count; i++) {
-      const BleGattCharacteristic *chr =
-          &event->char_discover.characteristics[i];
-      if (chr->uuid_type != BleGattUuidType16)
+    for (uint8_t i = 0; i < event->char_discover.count; i++) {
+      const BleGattCharacteristic *chr = &event->char_discover.chars[i];
+      if (chr->uuid_type != BLE_GATT_UUID_TYPE_16)
         continue;
 
       if (ble->detected_proto == WalkingPadProtoLegacy) {
-        if (chr->uuid.uuid16 == LEGACY_RX_UUID_16)
+        if (chr->uuid_16 == LEGACY_RX_UUID_16)
           ble->legacy_write_handle = chr->value_handle;
-        else if (chr->uuid.uuid16 == LEGACY_TX_UUID_16)
+        else if (chr->uuid_16 == LEGACY_TX_UUID_16)
           ble->legacy_notify_handle = chr->value_handle;
       } else {
-        switch (chr->uuid.uuid16) {
+        switch (chr->uuid_16) {
         case FTMS_TREADMILL_DATA_UUID_16:
           ble->ftms_treadmill_data_handle = chr->value_handle;
           FURI_LOG_I(TAG, "2ACD handle=%d", chr->value_handle);
@@ -353,7 +352,7 @@ static void gatt_cb(BleGattClientEvent *event, void *context) {
   }
 
   case BleGattClientEventNotification: {
-    uint16_t ch = event->notification.char_handle;
+    uint16_t ch = event->notification.value_handle;
     WalkingPadBleDataSource src;
 
     if (ble->detected_proto == WalkingPadProtoLegacy) {
@@ -390,7 +389,6 @@ static void gatt_cb(BleGattClientEvent *event, void *context) {
     break;
 
   case BleGattClientEventWriteComplete:
-  case BleGattClientEventMtuExchangeComplete:
     break;
 
   case BleGattClientEventError:
