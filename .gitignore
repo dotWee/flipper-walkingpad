@@ -9,6 +9,10 @@ build/
 # uFBT
 .ufbt/
 
+# Local act / CI Moon Firmware checkout
+moon-fw/
+app/
+
 # Test binaries
 tests/test_protocol
 tests/test_ftms
